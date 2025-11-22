@@ -2,7 +2,7 @@
   "name": "NYC Restaurants",
   "short_name": "NYC Eats",
   "description": "Discover the best restaurants in New York City",
-  "start_url": "/",
+  "start_url": "/nyc_beans/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#007AFF",

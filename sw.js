@@ -1,10 +1,10 @@
 // Service Worker for PWA
 const CACHE_NAME = 'nyc-restaurants-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/nyc_restaurants_enriched.json',
-  '/manifest.json',
+  '/nyc_beans/',
+  '/nyc_beans/index.html',
+  '/nyc_beans/nyc_restaurants_enriched.json',
+  '/nyc_beans/manifest.json',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
