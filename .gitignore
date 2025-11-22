@@ -1,0 +1,8 @@
+# Python scripts with API keys
+*.py
+
+# Large source data files
+location_geo.json
+
+# Don't need the original non-enriched data
+# nyc_restaurants.json
