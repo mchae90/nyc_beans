@@ -853,6 +853,9 @@
 
             deletedRestaurants.add(restaurantId);
 
+            // Remove from restaurants array immediately
+            restaurants = restaurants.filter(r => r.id !== restaurantId);
+
             // Save to localStorage to persist across sessions
             localStorage.setItem('adminDeletedRestaurants', JSON.stringify(Array.from(deletedRestaurants)));
 
@@ -862,6 +865,7 @@
             const uncommitted = deletedRestaurants.size;
             alert(`Restaurant deleted!\n\nTotal deletions (including uncommitted): ${uncommitted}\n\nThe downloaded file contains ALL your deletions.\nCommit it to your repository when you're ready to publish all changes.`);
 
+            // Refresh the map to show changes immediately
             filterRestaurants();
         }
 
