@@ -780,11 +780,15 @@
         let markerClusterGroup;
         let restaurants = [];
         let hiddenRestaurants = new Set();
+        let deletedRestaurants = new Set();
+        let editedRestaurants = {};
         let searchQuery = '';
         let userLocation = null;
         let userMarker = null;
         let locationEnabled = false;
         let sortBy = 'rating-high'; // Default sort option
+        let isAdminMode = false;
+        const ADMIN_KEY = 'nycbeans2024'; // Change this to your secret key
         let activeFilters = {
             cuisines: new Set(),
             minRating: 0,
@@ -841,6 +845,66 @@
             filterRestaurants();
         }
 
+        // Admin: Delete a restaurant permanently
+        function deleteRestaurant(restaurantId) {
+            if (!confirm('Are you sure you want to permanently delete this restaurant? This will affect all users.')) {
+                return;
+            }
+
+            deletedRestaurants.add(restaurantId);
+            downloadJSON(Array.from(deletedRestaurants), 'deleted_restaurants.json');
+            alert('Restaurant deleted! Download the deleted_restaurants.json file and commit it to your repository.');
+            filterRestaurants();
+        }
+
+        // Admin: Edit a restaurant
+        function editRestaurant(restaurant) {
+            const name = prompt('Restaurant Name:', restaurant.restaurant_name || restaurant.name);
+            if (name === null) return;
+
+            const street = prompt('Street Address:', restaurant.street);
+            if (street === null) return;
+
+            const cuisines = prompt('Cuisines (comma-separated):', restaurant.cuisines ? restaurant.cuisines.join(', ') : '');
+            if (cuisines === null) return;
+
+            const rating = prompt('Rating (0-5):', restaurant.rating || '');
+            const priceLevel = prompt('Price Level (1-4):', restaurant.price_level || '');
+            const website = prompt('Website:', restaurant.website || '');
+            const phone = prompt('Phone:', restaurant.phone || '');
+
+            // Store edits
+            editedRestaurants[restaurant.id] = {
+                restaurant_name: name,
+                name: name,
+                street: street,
+                cuisines: cuisines ? cuisines.split(',').map(c => c.trim()) : [],
+                rating: rating ? parseFloat(rating) : restaurant.rating,
+                price_level: priceLevel ? parseInt(priceLevel) : restaurant.price_level,
+                website: website || restaurant.website,
+                phone: phone || restaurant.phone
+            };
+
+            downloadJSON(editedRestaurants, 'edited_restaurants.json');
+            alert('Restaurant edited! Download the edited_restaurants.json file and commit it to your repository.');
+
+            // Reload to show changes
+            location.reload();
+        }
+
+        // Download JSON file
+        function downloadJSON(data, filename) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         // Clear all hidden restaurants
         function clearAllHidden() {
             if (confirm('Unhide all restaurants?')) {
@@ -892,11 +956,52 @@
             map.addLayer(markerClusterGroup);
         }
 
+        // Check for admin mode
+        function checkAdminMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const adminParam = urlParams.get('admin');
+            if (adminParam === ADMIN_KEY) {
+                isAdminMode = true;
+                document.body.insertAdjacentHTML('afterbegin', '<div style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 10000; border-radius: 5px; font-weight: bold;">🔐 ADMIN MODE</div>');
+            }
+        }
+
         // Load restaurant data
         async function loadRestaurants() {
             try {
+                // Check admin mode first
+                checkAdminMode();
+
+                // Load main restaurant data
                 const response = await fetch('nyc_restaurants_enriched.json');
                 restaurants = await response.json();
+
+                // Load deleted restaurants
+                try {
+                    const deletedResponse = await fetch('deleted_restaurants.json');
+                    if (deletedResponse.ok) {
+                        const deleted = await deletedResponse.json();
+                        deletedRestaurants = new Set(deleted);
+                    }
+                } catch (e) {
+                    console.log('No deleted restaurants file found');
+                }
+
+                // Load edited restaurants
+                try {
+                    const editedResponse = await fetch('edited_restaurants.json');
+                    if (editedResponse.ok) {
+                        const edited = await editedResponse.json();
+                        editedRestaurants = edited;
+                    }
+                } catch (e) {
+                    console.log('No edited restaurants file found');
+                }
+
+                // Apply edits and filter deleted
+                restaurants = restaurants
+                    .filter(r => !deletedRestaurants.has(r.id))
+                    .map(r => editedRestaurants[r.id] ? { ...r, ...editedRestaurants[r.id] } : r);
 
                 // Extract unique cuisines
                 const cuisineSet = new Set();
@@ -1041,14 +1146,33 @@
                     const marker = L.marker([parseFloat(r.lat), parseFloat(r.lng)])
                         .bindPopup(createPopupContent(r));
 
-                    // Add event listener for hide button after popup opens
+                    // Add event listener for buttons after popup opens
                     marker.on('popupopen', function() {
-                        const hideBtn = document.getElementById(`hide-${r.id}`);
-                        if (hideBtn) {
-                            hideBtn.onclick = function() {
-                                hideRestaurant(r.id);
-                                marker.closePopup();
-                            };
+                        if (isAdminMode) {
+                            const editBtn = document.getElementById(`edit-${r.id}`);
+                            const deleteBtn = document.getElementById(`delete-${r.id}`);
+
+                            if (editBtn) {
+                                editBtn.onclick = function() {
+                                    editRestaurant(r);
+                                    marker.closePopup();
+                                };
+                            }
+
+                            if (deleteBtn) {
+                                deleteBtn.onclick = function() {
+                                    deleteRestaurant(r.id);
+                                    marker.closePopup();
+                                };
+                            }
+                        } else {
+                            const hideBtn = document.getElementById(`hide-${r.id}`);
+                            if (hideBtn) {
+                                hideBtn.onclick = function() {
+                                    hideRestaurant(r.id);
+                                    marker.closePopup();
+                                };
+                            }
                         }
                     });
 
@@ -1119,8 +1243,13 @@
                         <a href="${googleMapsUrl}" target="_blank" class="btn">Google Maps</a>
                         <a href="${yelpUrl}" target="_blank" class="btn yelp">Yelp</a>
                     </div>
-                    <div style="margin-top: 8px;">
-                        <button id="hide-${restaurant.id}" class="btn hide-btn">🚫 Hide Restaurant</button>
+                    <div style="margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap;">
+                        ${isAdminMode ? `
+                            <button id="edit-${restaurant.id}" class="btn" style="flex: 1; background: #007AFF;">✏️ Edit</button>
+                            <button id="delete-${restaurant.id}" class="btn" style="flex: 1; background: #ff3b30;">🗑️ Delete</button>
+                        ` : `
+                            <button id="hide-${restaurant.id}" class="btn hide-btn" style="flex: 1;">🚫 Hide Restaurant</button>
+                        `}
                     </div>
                 </div>
             `;
