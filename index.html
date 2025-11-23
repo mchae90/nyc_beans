@@ -746,6 +746,14 @@
         </div>
 
         <div class="filter-section">
+            <label>Tipping</label>
+            <div class="price-filter" id="tippingFilter">
+                <div class="price-tag" data-tipping="optional">No Tip Expected</div>
+                <div class="price-tag" data-tipping="expected">Tip Expected</div>
+            </div>
+        </div>
+
+        <div class="filter-section">
             <label>Hidden Restaurants</label>
             <div id="hiddenList" style="font-size: 11px; color: #666; max-height: 150px; overflow-y: auto;">
                 None hidden
@@ -780,7 +788,8 @@
         let activeFilters = {
             cuisines: new Set(),
             minRating: 0,
-            prices: new Set()
+            prices: new Set(),
+            tipping: new Set()
         };
 
         // Calculate distance between two coordinates (Haversine formula)
@@ -915,7 +924,7 @@
                     filterRestaurants();
                 };
 
-                document.querySelectorAll('.price-tag').forEach(tag => {
+                document.querySelectorAll('#priceFilter .price-tag').forEach(tag => {
                     tag.onclick = () => {
                         const price = parseInt(tag.dataset.price);
                         if (activeFilters.prices.has(price)) {
@@ -923,6 +932,20 @@
                             tag.classList.remove('active');
                         } else {
                             activeFilters.prices.add(price);
+                            tag.classList.add('active');
+                        }
+                        filterRestaurants();
+                    };
+                });
+
+                document.querySelectorAll('#tippingFilter .price-tag').forEach(tag => {
+                    tag.onclick = () => {
+                        const tipping = tag.dataset.tipping;
+                        if (activeFilters.tipping.has(tipping)) {
+                            activeFilters.tipping.delete(tipping);
+                            tag.classList.remove('active');
+                        } else {
+                            activeFilters.tipping.add(tipping);
                             tag.classList.add('active');
                         }
                         filterRestaurants();
@@ -997,6 +1020,13 @@
                 // Price filter
                 if (activeFilters.prices.size > 0) {
                     if (!r.price_level || !activeFilters.prices.has(r.price_level)) {
+                        return false;
+                    }
+                }
+
+                // Tipping filter
+                if (activeFilters.tipping.size > 0) {
+                    if (!r.tipping_expected || !activeFilters.tipping.has(r.tipping_expected)) {
                         return false;
                     }
                 }
