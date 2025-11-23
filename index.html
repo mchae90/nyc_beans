@@ -754,6 +754,16 @@
         </div>
 
         <div class="filter-section">
+            <label>⭐ Starred</label>
+            <div style="margin-top: 5px;">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="starredOnlyCheckbox" style="margin-right: 8px;">
+                    <span>Show only starred restaurants</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="filter-section">
             <label>Hidden Restaurants</label>
             <div id="hiddenList" style="font-size: 11px; color: #666; max-height: 150px; overflow-y: auto;">
                 None hidden
@@ -782,6 +792,7 @@
         let hiddenRestaurants = new Set();
         let deletedRestaurants = new Set();
         let editedRestaurants = {};
+        let starredRestaurants = new Set();
         let searchQuery = '';
         let userLocation = null;
         let userMarker = null;
@@ -793,7 +804,8 @@
             cuisines: new Set(),
             minRating: 0,
             prices: new Set(),
-            tipping: new Set()
+            tipping: new Set(),
+            showStarredOnly: false
         };
 
         // Calculate distance between two coordinates (Haversine formula)
@@ -908,6 +920,27 @@
 
             // Reload to show changes
             location.reload();
+        }
+
+        // Admin: Star/Unstar a restaurant
+        function toggleStarRestaurant(restaurantId) {
+            if (starredRestaurants.has(restaurantId)) {
+                starredRestaurants.delete(restaurantId);
+            } else {
+                starredRestaurants.add(restaurantId);
+            }
+
+            // Save to localStorage to persist across sessions
+            localStorage.setItem('adminStarredRestaurants', JSON.stringify(Array.from(starredRestaurants)));
+
+            // Download the complete list (GitHub + localStorage)
+            downloadJSON(Array.from(starredRestaurants), 'starred_restaurants.json');
+
+            const starCount = starredRestaurants.size;
+            alert(`Restaurant ${starredRestaurants.has(restaurantId) ? 'starred' : 'unstarred'}!\n\nTotal starred (including uncommitted): ${starCount}\n\nThe downloaded file contains ALL your starred restaurants.\nCommit it to your repository when you're ready to publish.`);
+
+            // Refresh the map to update marker
+            filterRestaurants();
         }
 
         // Download JSON file
@@ -1051,6 +1084,27 @@
                     }
                 }
 
+                // Load starred restaurants from GitHub
+                try {
+                    const starredResponse = await fetch('starred_restaurants.json');
+                    if (starredResponse.ok) {
+                        const starred = await starredResponse.json();
+                        starredRestaurants = new Set(starred);
+                    }
+                } catch (e) {
+                    console.log('No starred restaurants file found');
+                }
+
+                // Merge with localStorage stars (admin only)
+                if (isAdminMode) {
+                    const localStarred = localStorage.getItem('adminStarredRestaurants');
+                    if (localStarred) {
+                        const localStarredArray = JSON.parse(localStarred);
+                        localStarredArray.forEach(id => starredRestaurants.add(id));
+                        console.log(`Loaded ${localStarredArray.length} starred from localStorage`);
+                    }
+                }
+
                 // Apply edits and filter deleted
                 restaurants = restaurants
                     .filter(r => !deletedRestaurants.has(r.id))
@@ -1109,6 +1163,12 @@
                         filterRestaurants();
                     };
                 });
+
+                // Setup starred filter checkbox
+                document.getElementById('starredOnlyCheckbox').onchange = (e) => {
+                    activeFilters.showStarredOnly = e.target.checked;
+                    filterRestaurants();
+                };
 
                 // Setup clear hidden button
                 document.getElementById('clearHidden').onclick = clearAllHidden;
@@ -1189,6 +1249,13 @@
                     }
                 }
 
+                // Starred filter
+                if (activeFilters.showStarredOnly) {
+                    if (!starredRestaurants.has(r.id)) {
+                        return false;
+                    }
+                }
+
                 return true;
             });
 
@@ -1196,9 +1263,17 @@
             const markers = [];
             filtered.forEach(r => {
                 if (r.lat && r.lng) {
-                    // Create custom icon based on tipping status
+                    // Create custom icon based on starred status or tipping status
                     let markerIcon;
-                    if (r.tipping_expected === 'optional') {
+                    if (starredRestaurants.has(r.id)) {
+                        // Gold star marker for starred restaurants
+                        markerIcon = L.divIcon({
+                            className: 'custom-marker',
+                            html: '<div style="background-color: #ffd700; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; border: 3px solid white; transform: rotate(-45deg); box-shadow: 0 4px 8px rgba(0,0,0,0.5);"><div style="font-size: 18px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg);">⭐</div></div>',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 32]
+                        });
+                    } else if (r.tipping_expected === 'optional') {
                         // Gray/transparent marker for no tip expected (casual dining)
                         markerIcon = L.divIcon({
                             className: 'custom-marker',
@@ -1230,8 +1305,16 @@
                     // Add event listener for buttons after popup opens
                     marker.on('popupopen', function() {
                         if (isAdminMode) {
+                            const starBtn = document.getElementById(`star-${r.id}`);
                             const editBtn = document.getElementById(`edit-${r.id}`);
                             const deleteBtn = document.getElementById(`delete-${r.id}`);
+
+                            if (starBtn) {
+                                starBtn.onclick = function() {
+                                    toggleStarRestaurant(r.id);
+                                    marker.closePopup();
+                                };
+                            }
 
                             if (editBtn) {
                                 editBtn.onclick = function() {
@@ -1326,6 +1409,9 @@
                     </div>
                     <div style="margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap;">
                         ${isAdminMode ? `
+                            <button id="star-${restaurant.id}" class="btn" style="flex: 1; background: ${starredRestaurants.has(restaurant.id) ? '#ffd700' : '#gray'}; color: ${starredRestaurants.has(restaurant.id) ? '#000' : '#fff'};">
+                                ${starredRestaurants.has(restaurant.id) ? '⭐ Starred' : '☆ Star'}
+                            </button>
                             <button id="edit-${restaurant.id}" class="btn" style="flex: 1; background: #007AFF;">✏️ Edit</button>
                             <button id="delete-${restaurant.id}" class="btn" style="flex: 1; background: #ff3b30;">🗑️ Delete</button>
                         ` : `
