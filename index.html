@@ -1101,6 +1101,12 @@
                 ? `<h4><a href="${restaurant.website}" target="_blank" class="restaurant-name-link">${name} 🔗</a></h4>`
                 : `<h4>${name}</h4>`;
 
+            // Generate Google Maps URL
+            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + restaurant.street + ' ' + restaurant.city + ' ' + restaurant.state)}`;
+
+            // Generate Yelp URL
+            const yelpUrl = `https://www.yelp.com/search?find_desc=${encodeURIComponent(name)}&find_loc=${encodeURIComponent(restaurant.street + ', ' + restaurant.city + ', ' + restaurant.state)}`;
+
             return `
                 <div class="restaurant-popup">
                     ${nameDisplay}
@@ -1110,8 +1116,8 @@
                     ${tippingText}
                     ${cuisines ? `<div class="cuisines">${cuisines}</div>` : ''}
                     <div class="links">
-                        <a href="${restaurant.google_maps_url}" target="_blank" class="btn">Google Maps</a>
-                        <a href="${restaurant.yelp_url}" target="_blank" class="btn yelp">Yelp</a>
+                        <a href="${googleMapsUrl}" target="_blank" class="btn">Google Maps</a>
+                        <a href="${yelpUrl}" target="_blank" class="btn yelp">Yelp</a>
                     </div>
                     <div style="margin-top: 8px;">
                         <button id="hide-${restaurant.id}" class="btn hide-btn">🚫 Hide Restaurant</button>
