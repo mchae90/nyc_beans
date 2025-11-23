@@ -793,6 +793,7 @@
         let deletedRestaurants = new Set();
         let editedRestaurants = {};
         let starredRestaurants = new Set();
+        let greyedOutRestaurants = new Set();
         let searchQuery = '';
         let userLocation = null;
         let userMarker = null;
@@ -938,6 +939,27 @@
 
             const starCount = starredRestaurants.size;
             alert(`Restaurant ${starredRestaurants.has(restaurantId) ? 'starred' : 'unstarred'}!\n\nTotal starred (including uncommitted): ${starCount}\n\nThe downloaded file contains ALL your starred restaurants.\nCommit it to your repository when you're ready to publish.`);
+
+            // Refresh the map to update marker
+            filterRestaurants();
+        }
+
+        // Admin: Grey out/un-grey a restaurant
+        function toggleGreyOutRestaurant(restaurantId) {
+            if (greyedOutRestaurants.has(restaurantId)) {
+                greyedOutRestaurants.delete(restaurantId);
+            } else {
+                greyedOutRestaurants.add(restaurantId);
+            }
+
+            // Save to localStorage to persist across sessions
+            localStorage.setItem('adminGreyedOutRestaurants', JSON.stringify(Array.from(greyedOutRestaurants)));
+
+            // Download the complete list (GitHub + localStorage)
+            downloadJSON(Array.from(greyedOutRestaurants), 'greyed_out_restaurants.json');
+
+            const greyCount = greyedOutRestaurants.size;
+            alert(`Restaurant ${greyedOutRestaurants.has(restaurantId) ? 'greyed out' : 'un-greyed'}!\n\nTotal greyed out (including uncommitted): ${greyCount}\n\nThe downloaded file contains ALL your greyed out restaurants.\nCommit it to your repository when you're ready to publish.`);
 
             // Refresh the map to update marker
             filterRestaurants();
@@ -1105,6 +1127,27 @@
                     }
                 }
 
+                // Load greyed out restaurants from GitHub
+                try {
+                    const greyedResponse = await fetch('greyed_out_restaurants.json');
+                    if (greyedResponse.ok) {
+                        const greyed = await greyedResponse.json();
+                        greyedOutRestaurants = new Set(greyed);
+                    }
+                } catch (e) {
+                    console.log('No greyed out restaurants file found');
+                }
+
+                // Merge with localStorage greyed out (admin only)
+                if (isAdminMode) {
+                    const localGreyed = localStorage.getItem('adminGreyedOutRestaurants');
+                    if (localGreyed) {
+                        const localGreyedArray = JSON.parse(localGreyed);
+                        localGreyedArray.forEach(id => greyedOutRestaurants.add(id));
+                        console.log(`Loaded ${localGreyedArray.length} greyed out from localStorage`);
+                    }
+                }
+
                 // Apply edits and filter deleted
                 restaurants = restaurants
                     .filter(r => !deletedRestaurants.has(r.id))
@@ -1263,7 +1306,7 @@
             const markers = [];
             filtered.forEach(r => {
                 if (r.lat && r.lng) {
-                    // Create custom icon based on starred status or tipping status
+                    // Create custom icon based on starred, greyed out, or tipping status
                     let markerIcon;
                     if (starredRestaurants.has(r.id)) {
                         // Gold star marker for starred restaurants
@@ -1272,6 +1315,14 @@
                             html: '<div style="background-color: #ffd700; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; border: 3px solid white; transform: rotate(-45deg); box-shadow: 0 4px 8px rgba(0,0,0,0.5);"><div style="font-size: 18px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg);">⭐</div></div>',
                             iconSize: [32, 32],
                             iconAnchor: [16, 32]
+                        });
+                    } else if (greyedOutRestaurants.has(r.id)) {
+                        // Force grey marker for manually greyed out restaurants
+                        markerIcon = L.divIcon({
+                            className: 'custom-marker',
+                            html: '<div style="background-color: rgba(142, 142, 147, 0.4); width: 20px; height: 20px; border-radius: 50% 50% 50% 0; border: 1px solid rgba(142, 142, 147, 0.6); transform: rotate(-45deg); box-shadow: 0 1px 3px rgba(0,0,0,0.2);"><div style="width: 6px; height: 6px; background: rgba(255, 255, 255, 0.7); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg);"></div></div>',
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 20]
                         });
                     } else if (r.tipping_expected === 'optional') {
                         // Gray/transparent marker for no tip expected (casual dining)
@@ -1306,12 +1357,20 @@
                     marker.on('popupopen', function() {
                         if (isAdminMode) {
                             const starBtn = document.getElementById(`star-${r.id}`);
+                            const greyBtn = document.getElementById(`grey-${r.id}`);
                             const editBtn = document.getElementById(`edit-${r.id}`);
                             const deleteBtn = document.getElementById(`delete-${r.id}`);
 
                             if (starBtn) {
                                 starBtn.onclick = function() {
                                     toggleStarRestaurant(r.id);
+                                    marker.closePopup();
+                                };
+                            }
+
+                            if (greyBtn) {
+                                greyBtn.onclick = function() {
+                                    toggleGreyOutRestaurant(r.id);
                                     marker.closePopup();
                                 };
                             }
@@ -1411,6 +1470,9 @@
                         ${isAdminMode ? `
                             <button id="star-${restaurant.id}" class="btn" style="flex: 1; background: ${starredRestaurants.has(restaurant.id) ? '#ffd700' : '#gray'}; color: ${starredRestaurants.has(restaurant.id) ? '#000' : '#fff'};">
                                 ${starredRestaurants.has(restaurant.id) ? '⭐ Starred' : '☆ Star'}
+                            </button>
+                            <button id="grey-${restaurant.id}" class="btn" style="flex: 1; background: ${greyedOutRestaurants.has(restaurant.id) ? '#8e8e93' : '#gray'}; color: #fff;">
+                                ${greyedOutRestaurants.has(restaurant.id) ? '◐ Greyed' : '○ Grey Out'}
                             </button>
                             <button id="edit-${restaurant.id}" class="btn" style="flex: 1; background: #007AFF;">✏️ Edit</button>
                             <button id="delete-${restaurant.id}" class="btn" style="flex: 1; background: #ff3b30;">🗑️ Delete</button>
