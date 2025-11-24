@@ -901,11 +901,8 @@
             // Save to localStorage to persist across sessions
             localStorage.setItem('adminDeletedRestaurants', JSON.stringify(Array.from(deletedRestaurants)));
 
-            // Download the complete list (GitHub + localStorage)
-            downloadJSON(Array.from(deletedRestaurants), 'deleted_restaurants.json');
-
             const uncommitted = deletedRestaurants.size;
-            alert(`Restaurant deleted!\n\nTotal deletions (including uncommitted): ${uncommitted}\n\nThe downloaded file contains ALL your deletions.\nCommit it to your repository when you're ready to publish all changes.`);
+            alert(`Restaurant deleted!\n\nTotal deletions: ${uncommitted}\n\nClick "Download All Changes" in the admin badge when ready to download.`);
 
             // Refresh the map to show changes immediately
             filterRestaurants();
@@ -942,11 +939,8 @@
             // Save to localStorage to persist across sessions
             localStorage.setItem('adminEditedRestaurants', JSON.stringify(editedRestaurants));
 
-            // Download the complete list (GitHub + localStorage)
-            downloadJSON(editedRestaurants, 'edited_restaurants.json');
-
             const editCount = Object.keys(editedRestaurants).length;
-            alert(`Restaurant edited!\n\nTotal edits (including uncommitted): ${editCount}\n\nThe downloaded file contains ALL your edits.\nCommit it to your repository when you're ready to publish all changes.`);
+            alert(`Restaurant edited!\n\nTotal edits: ${editCount}\n\nClick "Download All Changes" in the admin badge when ready to download.`);
 
             // Reload to show changes
             location.reload();
@@ -963,11 +957,8 @@
             // Save to localStorage to persist across sessions
             localStorage.setItem('adminStarredRestaurants', JSON.stringify(Array.from(starredRestaurants)));
 
-            // Download the complete list (GitHub + localStorage)
-            downloadJSON(Array.from(starredRestaurants), 'starred_restaurants.json');
-
             const starCount = starredRestaurants.size;
-            alert(`Restaurant ${starredRestaurants.has(restaurantId) ? 'starred' : 'unstarred'}!\n\nTotal starred (including uncommitted): ${starCount}\n\nThe downloaded file contains ALL your starred restaurants.\nCommit it to your repository when you're ready to publish.`);
+            alert(`Restaurant ${starredRestaurants.has(restaurantId) ? 'starred' : 'unstarred'}!\n\nTotal starred: ${starCount}\n\nClick "Download All Changes" in the admin badge when ready to download.`);
 
             // Refresh the map to update marker
             filterRestaurants();
@@ -984,11 +975,8 @@
             // Save to localStorage to persist across sessions
             localStorage.setItem('adminGreyedOutRestaurants', JSON.stringify(Array.from(greyedOutRestaurants)));
 
-            // Download the complete list (GitHub + localStorage)
-            downloadJSON(Array.from(greyedOutRestaurants), 'greyed_out_restaurants.json');
-
             const greyCount = greyedOutRestaurants.size;
-            alert(`Restaurant ${greyedOutRestaurants.has(restaurantId) ? 'greyed out' : 'un-greyed'}!\n\nTotal greyed out (including uncommitted): ${greyCount}\n\nThe downloaded file contains ALL your greyed out restaurants.\nCommit it to your repository when you're ready to publish.`);
+            alert(`Restaurant ${greyedOutRestaurants.has(restaurantId) ? 'greyed out' : 'un-greyed'}!\n\nTotal greyed out: ${greyCount}\n\nClick "Download All Changes" in the admin badge when ready to download.`);
 
             // Refresh the map to update marker
             filterRestaurants();
@@ -1067,9 +1055,45 @@
                 document.body.insertAdjacentHTML('afterbegin', `
                     <div style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 10000; border-radius: 5px; font-weight: bold;">
                         🔐 ADMIN MODE
-                        <button onclick="clearAdminLocalStorage()" style="margin-left: 10px; padding: 5px 10px; background: white; color: red; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">Clear Draft Changes</button>
+                        <button onclick="downloadAllAdminChanges()" style="margin-left: 10px; padding: 5px 10px; background: white; color: red; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">Download All Changes</button>
+                        <button onclick="clearAdminLocalStorage()" style="margin-left: 5px; padding: 5px 10px; background: white; color: red; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">Clear Draft Changes</button>
                     </div>
                 `);
+            }
+        }
+
+        // Download all admin changes at once
+        function downloadAllAdminChanges() {
+            let filesDownloaded = 0;
+
+            // Download deleted restaurants
+            if (deletedRestaurants.size > 0) {
+                downloadJSON(Array.from(deletedRestaurants), 'deleted_restaurants.json');
+                filesDownloaded++;
+            }
+
+            // Download starred restaurants
+            if (starredRestaurants.size > 0) {
+                downloadJSON(Array.from(starredRestaurants), 'starred_restaurants.json');
+                filesDownloaded++;
+            }
+
+            // Download greyed out restaurants
+            if (greyedOutRestaurants.size > 0) {
+                downloadJSON(Array.from(greyedOutRestaurants), 'greyed_out_restaurants.json');
+                filesDownloaded++;
+            }
+
+            // Download edited restaurants
+            if (Object.keys(editedRestaurants).length > 0) {
+                downloadJSON(editedRestaurants, 'edited_restaurants.json');
+                filesDownloaded++;
+            }
+
+            if (filesDownloaded === 0) {
+                alert('No changes to download. Make some edits first!');
+            } else {
+                alert(`Downloaded ${filesDownloaded} file(s)!\n\nCommit these to your repository when ready.`);
             }
         }
 
@@ -1078,6 +1102,8 @@
             if (confirm('Clear all uncommitted deletions and edits from localStorage?\n\nThis will reset to the state in your GitHub repository.\nAny uncommitted changes will be lost!')) {
                 localStorage.removeItem('adminDeletedRestaurants');
                 localStorage.removeItem('adminEditedRestaurants');
+                localStorage.removeItem('adminStarredRestaurants');
+                localStorage.removeItem('adminGreyedOutRestaurants');
                 alert('Admin localStorage cleared! Reloading page...');
                 location.reload();
             }
