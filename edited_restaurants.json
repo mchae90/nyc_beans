@@ -1,1 +1,14 @@
-{}
+{
+  "138102": {
+    "restaurant_name": "Malibu Farm",
+    "name": "Malibu Farm",
+    "street": "89 South St",
+    "cuisines": [
+      "restaurant"
+    ],
+    "rating": 4.1,
+    "price_level": 2,
+    "website": "https://www.malibufarm.nyc/",
+    "phone": "(917) 979-4811"
+  }
+}
