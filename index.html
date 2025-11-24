@@ -1375,17 +1375,17 @@
                         // Force grey marker for manually greyed out restaurants
                         markerIcon = L.divIcon({
                             className: 'custom-marker',
-                            html: '<div style="background-color: rgba(142, 142, 147, 0.4); width: 20px; height: 20px; border-radius: 50% 50% 50% 0; border: 1px solid rgba(142, 142, 147, 0.6); transform: rotate(-45deg); box-shadow: 0 1px 3px rgba(0,0,0,0.2);"><div style="width: 6px; height: 6px; background: rgba(255, 255, 255, 0.7); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg);"></div></div>',
-                            iconSize: [20, 20],
-                            iconAnchor: [10, 20]
+                            html: '<div style="background-color: rgba(142, 142, 147, 0.7); width: 24px; height: 24px; border-radius: 50% 50% 50% 0; border: 2px solid rgba(255, 255, 255, 0.8); transform: rotate(-45deg); box-shadow: 0 2px 4px rgba(0,0,0,0.3);"><div style="width: 8px; height: 8px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg);"></div></div>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 24]
                         });
                     } else if (r.tipping_expected === 'optional') {
                         // Gray/transparent marker for no tip expected (casual dining)
                         markerIcon = L.divIcon({
                             className: 'custom-marker',
-                            html: '<div style="background-color: rgba(142, 142, 147, 0.4); width: 20px; height: 20px; border-radius: 50% 50% 50% 0; border: 1px solid rgba(142, 142, 147, 0.6); transform: rotate(-45deg); box-shadow: 0 1px 3px rgba(0,0,0,0.2);"><div style="width: 6px; height: 6px; background: rgba(255, 255, 255, 0.7); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg);"></div></div>',
-                            iconSize: [20, 20],
-                            iconAnchor: [10, 20]
+                            html: '<div style="background-color: rgba(142, 142, 147, 0.7); width: 24px; height: 24px; border-radius: 50% 50% 50% 0; border: 2px solid rgba(255, 255, 255, 0.8); transform: rotate(-45deg); box-shadow: 0 2px 4px rgba(0,0,0,0.3);"><div style="width: 8px; height: 8px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg);"></div></div>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 24]
                         });
                     } else if (r.tipping_expected === 'expected') {
                         // Bold red marker for tip expected (sit-down restaurants)
