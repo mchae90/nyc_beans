@@ -757,7 +757,7 @@
             <label>⭐ Starred</label>
             <div style="margin-top: 5px;">
                 <label style="display: flex; align-items: center; cursor: pointer;">
-                    <input type="checkbox" id="starredOnlyCheckbox" style="margin-right: 8px;">
+                    <input type="checkbox" id="starredOnlyCheckbox" style="margin-right: 8px;" checked>
                     <span>Show only starred restaurants</span>
                 </label>
             </div>
@@ -789,6 +789,7 @@
         let map;
         let markerClusterGroup;
         let restaurants = [];
+        let restaurantMarkers = new Map(); // Map restaurant ID to marker for quick lookup
         let hiddenRestaurants = new Set();
         let deletedRestaurants = new Set();
         let editedRestaurants = {};
@@ -807,7 +808,7 @@
             minRating: 0,
             prices: new Set(),
             tipping: new Set(),
-            showStarredOnly: false
+            showStarredOnly: true
         };
 
         // Check for app updates
@@ -1296,6 +1297,7 @@
         function filterRestaurants() {
             // Clear existing markers from cluster group
             markerClusterGroup.clearLayers();
+            restaurantMarkers.clear();
 
             // Filter restaurants
             const filtered = restaurants.filter(r => {
@@ -1407,6 +1409,9 @@
 
                     const marker = L.marker([parseFloat(r.lat), parseFloat(r.lng)], { icon: markerIcon })
                         .bindPopup(createPopupContent(r));
+
+                    // Store marker reference for quick lookup
+                    restaurantMarkers.set(r.id, marker);
 
                     // Add event listener for buttons after popup opens
                     marker.on('popupopen', function() {
@@ -1714,14 +1719,21 @@
 
                 card.onclick = () => {
                     if (r.lat && r.lng) {
-                        map.setView([parseFloat(r.lat), parseFloat(r.lng)], 16);
-                        // Find and open the marker
-                        markerClusterGroup.eachLayer(marker => {
-                            const pos = marker.getLatLng();
-                            if (pos.lat === parseFloat(r.lat) && pos.lng === parseFloat(r.lng)) {
-                                marker.openPopup();
-                            }
-                        });
+                        // Get marker directly by ID
+                        const marker = restaurantMarkers.get(r.id);
+                        if (marker) {
+                            // If marker is in a cluster, zoom to show it first, then open popup
+                            markerClusterGroup.zoomToShowLayer(marker, () => {
+                                // Small delay to ensure marker is fully unclustered and ready
+                                setTimeout(() => {
+                                    marker.openPopup();
+                                }, 100);
+                            });
+                        } else if (r.lat && r.lng) {
+                            // Fallback if marker not found (shouldn't happen)
+                            map.setView([parseFloat(r.lat), parseFloat(r.lng)], 16);
+                        }
+
                         // Close list view on mobile
                         if (window.innerWidth <= 768) {
                             toggleListView();
