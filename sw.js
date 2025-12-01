@@ -1,5 +1,5 @@
 // Service Worker for PWA
-const CACHE_NAME = 'nyc-restaurants-v1';
+const CACHE_NAME = 'nyc-restaurants-v1.0.4';
 const urlsToCache = [
   '/nyc_beans/',
   '/nyc_beans/index.html',
