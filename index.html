@@ -689,7 +689,7 @@
 
     <div id="listView">
         <div class="list-header">
-            <h3>Restaurants</h3>
+            <h3>Restaurants <span style="font-size: 12px; color: #666; font-weight: normal;" id="versionDisplay"></span></h3>
             <button class="close-list" onclick="toggleListView()">✕</button>
         </div>
         <div class="search-container">
@@ -1168,6 +1168,7 @@
                     if (starredResponse.ok) {
                         const starred = await starredResponse.json();
                         starredRestaurants = new Set(starred);
+                        console.log(`Loaded ${starredRestaurants.size} starred restaurants from file`);
                     }
                 } catch (e) {
                     console.log('No starred restaurants file found');
@@ -1272,8 +1273,12 @@
                 // Setup clear hidden button
                 document.getElementById('clearHidden').onclick = clearAllHidden;
 
+                // Display version number
+                document.getElementById('versionDisplay').textContent = `v${APP_VERSION}`;
+
                 // Display all restaurants initially
                 updateHiddenList();
+                console.log(`About to filter. showStarredOnly: ${activeFilters.showStarredOnly}, starredRestaurants size: ${starredRestaurants.size}`);
                 filterRestaurants();
 
                 document.getElementById('loading').style.display = 'none';
